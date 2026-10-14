@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+**/.vscode/
+**/*.user
+.env
+.env.example
+test/
+README.md
+**/appsettings.Development.json
