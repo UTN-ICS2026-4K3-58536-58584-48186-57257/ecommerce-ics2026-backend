@@ -1,0 +1,32 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master", "dev" ]
+  pull_request:
+    branches: [ "main", "master", "dev" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Descargar código
+      uses: actions/checkout@v4
+
+    - name: Configurar .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0'
+
+    - name: Restaurar paquetes
+      run: dotnet restore
+
+    - name: Compilar
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Ejecutar pruebas
+      run: dotnet test --no-build --verbosity normal
+
+    - name: Construir imagen Docker
+      run: docker build -t mi-api-app:${{ github.sha }} .
