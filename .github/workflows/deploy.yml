@@ -1,32 +1,64 @@
+
 name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main", "master", "development" ]
+    branches: [main, master, development]
+
   pull_request:
-    branches: [ "main", "master", "development" ]
+    branches: [main, master, development]
+
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: mi-api-app
 
 jobs:
-  build-and-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Descargar código
-      uses: actions/checkout@v4
+      - name: Descargar código
+        uses: actions/checkout@v4
 
-    - name: Configurar .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0'
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0'
 
-    - name: Restaurar paquetes
-      run: dotnet restore
+      - name: Restaurar paquetes
+        run: dotnet restore
 
-    - name: Compilar
-      run: dotnet build --no-restore --configuration Release
+      - name: Compilar
+        run: dotnet build --no-restore --configuration Release
 
-    - name: Ejecutar pruebas
-      run: dotnet test --no-build --verbosity normal
+      - name: Ejecutar pruebas
+        run: dotnet test --configuration Release --no-build --verbosity normal
 
-    - name: Construir imagen Docker
-      run: docker build -t mi-api-app:${{ github.sha }} .
+      - name: Iniciar sesión en Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Construir imagen Docker
+        run: |
+          docker build \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest \
+            .
+
+      - name: Publicar imagen en Docker Hub
+        if: github.event_name != 'pull_request'
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Desplegar en Azure App Service
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.APP_SERVICE_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
