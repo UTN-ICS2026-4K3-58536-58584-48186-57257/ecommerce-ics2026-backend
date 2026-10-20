@@ -82,7 +82,7 @@ public class Program
                     throw new AuthorizationException(ErrorMessages.ForbiddenAccess);
                 }
             };
-            });
+        });
 
 
         //Swagger con autenticación
@@ -133,11 +133,10 @@ public class Program
 
         app.UseMiddleware<ErrorHandlingMiddleware>();
 
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
+
+        app.UseSwagger();
+        app.UseSwaggerUI();
+
 
         app.UseHttpsRedirection();
         app.UseCors(MyAllowSpecificOrigins);
@@ -150,9 +149,14 @@ public class Program
         {
             var services = scope.ServiceProvider;
 
-            // Seed de customers desde JSON
+            // Crear o actualizar las tablas de ambos contextos antes de cargar datos
             var db = services.GetRequiredService<Dsw2025TpiContext>();
-            //await db.Database.MigrateAsync();
+            await db.Database.MigrateAsync();
+
+            var authDb = services.GetRequiredService<AuthenticateContext>();
+            await authDb.Database.MigrateAsync();
+
+            // Seed de customers desde JSON
             await db.SeedCustomersAsync();
 
             // Seed de usuarios + roles en Identity

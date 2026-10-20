@@ -271,3 +271,22 @@ PUT /api/orders/{id}/status
 
 Para dudas o soporte, contacte a los integrantes del grupo.
 
+
+## 🐳 Ejecutar con Docker
+
+**Requisitos:** Docker Engine y Docker Compose.
+
+| Variable | Descripción |
+|---|---|
+| `ASPNETCORE_ENVIRONMENT` | Entorno de ejecución: `Development` o `Production` |
+| `ConnectionStrings__DefaultConnection` | Cadena de conexión a SQL Server |
+| `Jwt__Key` | Clave para firmar los tokens JWT (mínimo 32 caracteres) |
+
+**Levantar el entorno local:**
+
+1. Copiar `.env.example` como `.env` y completar los valores.
+2. Desde la raíz del repositorio, ejecutar: `docker compose up --build -d`
+3. Verificar en `http://localhost:8080/healthcheck` y `http://localhost:8080/swagger`
+4. Para detener: `docker compose down`
+
+La base de datos se crea automáticamente al iniciar la API.
