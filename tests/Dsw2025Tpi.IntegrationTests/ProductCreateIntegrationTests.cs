@@ -77,7 +77,7 @@ public class ProductCreateIntegrationTests
         
         // --- AQUÍ ESTÁ EL CAMBIO PARA ROMPER EL TEST ---
         // Se espera un precio incorrecto (9999.99) en lugar de 1200.50 para forzar el fallo
-        Assert.Equal(9999.99m, row.CurrentUnitPrice); 
+        Assert.Equal(1200.50m, row.CurrentUnitPrice); 
         
         Assert.Equal(request.StockQuantity, row.StockQuantity);
         Assert.True(row.IsActive);
