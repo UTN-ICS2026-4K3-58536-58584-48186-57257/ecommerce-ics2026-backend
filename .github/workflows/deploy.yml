@@ -7,7 +7,11 @@ on:
     branches: [ "main", "master", "development" ]
 
 jobs:
-  build-and-test:
+  # ==================================================================
+  # JOB 1: Quality Gate - pruebas automatizadas
+  # ==================================================================
+  run-tests:
+    name: Quality Gate - Pruebas Unitarias e Integración
     runs-on: ubuntu-latest
 
     steps:
@@ -26,7 +30,18 @@ jobs:
       run: dotnet build --no-restore --configuration Release
 
     - name: Ejecutar pruebas
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build --configuration Release --verbosity normal
+
+  # ==================================================================
+  # JOB 2: Imagen Docker (solo corre si run-tests termina bien)
+  # ==================================================================
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    needs: run-tests
+
+    steps:
+    - name: Descargar código
+      uses: actions/checkout@v4
 
     - name: Construir imagen Docker
       run: docker build -t mi-api-app:${{ github.sha }} .
