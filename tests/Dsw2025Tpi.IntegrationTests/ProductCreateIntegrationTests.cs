@@ -44,7 +44,7 @@ public class ProductCreateIntegrationTests
     }
 
     // ---------------------------------------------------------------
-    // 2) Admin -> 201 y la fila existe en SQLite con los valores correctos
+    // 2) Admin -> 201 y la fila existe en SQLite con los valores correctos (ROTO A PROPÓSITO)
     // ---------------------------------------------------------------
     [Fact]
     public async Task AddProduct_WhenAuthenticatedAsAdmin_PersistsInSqliteAndReturnsCreated()
@@ -74,7 +74,11 @@ public class ProductCreateIntegrationTests
         Assert.Equal(request.InternalCode, row.InternalCode);
         Assert.Equal(request.Name, row.Name);
         Assert.Equal(request.Description, row.Description);
-        Assert.Equal(request.CurrentUnitPrice, row.CurrentUnitPrice);
+        
+        // --- AQUÍ ESTÁ EL CAMBIO PARA ROMPER EL TEST ---
+        // Se espera un precio incorrecto (9999.99) en lugar de 1200.50 para forzar el fallo
+        Assert.Equal(9999.99m, row.CurrentUnitPrice); 
+        
         Assert.Equal(request.StockQuantity, row.StockQuantity);
         Assert.True(row.IsActive);
     }
