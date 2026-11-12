@@ -1,4 +1,3 @@
-
 name: CI/CD Pipeline
 
 on:
@@ -14,34 +13,42 @@ env:
   IMAGE_NAME: dsw2025tpi-api
 
 jobs:
-  build-and-deploy:
+  # ==================================================================
+  # JOB 1: Quality Gate - pruebas automatizadas
+  # ==================================================================
+  run-tests:
+    name: Quality Gate - Pruebas Unitarias e Integración
     runs-on: ubuntu-latest
 
     steps:
-
-      # 1. Descargar repositorio
       - name: Descargar código
         uses: actions/checkout@v4
 
-      # 2. Configurar .NET 8
       - name: Configurar .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      # 3. Restaurar dependencias
       - name: Restaurar paquetes
         run: dotnet restore
 
-      # 4. Compilar proyecto
       - name: Compilar
         run: dotnet build --no-restore --configuration Release
 
-      # 5. Ejecutar pruebas automatizadas
       - name: Ejecutar pruebas
         run: dotnet test --configuration Release --no-build --verbosity normal
 
-      # 6. Iniciar sesión en Docker Hub
+  # ==================================================================
+  # JOB 2: Imagen Docker y Despliegue (solo corre si run-tests termina bien)
+  # ==================================================================
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    needs: run-tests
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
       - name: Iniciar sesión en Docker Hub
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -49,7 +56,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 7. Construir imagen Docker
       - name: Construir imagen Docker
         run: |
           docker build \
@@ -57,14 +63,12 @@ jobs:
             -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest \
             -f Dockerfile .
 
-      # 8. Publicar imagen en Docker Hub
       - name: Publicar imagen en Docker Hub
         if: github.event_name != 'pull_request'
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
-      # 9. Desplegar en Azure App Service
       - name: Desplegar en Azure App Service
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: azure/webapps-deploy@v3
