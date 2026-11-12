@@ -5,19 +5,22 @@ using Dsw2025Tpi.Application.Services.Interfaces;
 using Dsw2025Tpi.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Dsw2025Tpi.Domain.Interfaces;
 
 namespace Dsw2025Tpi.Application.Services;
 
 public class OrderManagementService : IOrderManagementService
 {
-    private readonly Dsw2025TpiContext _context;
+        private readonly Dsw2025TpiContext _context;
+    private readonly IRepository _repository;
 
-    public OrderManagementService(Dsw2025TpiContext context)
+    public OrderManagementService(Dsw2025TpiContext context, IRepository repository)
     {
         _context = context;
+        _repository = repository;
     }
-
-    //Crear orden
+   
+                //Crear orden
     public async Task<OrderModel.OrderResponse> CreateOrderAsync(OrderModel.OrderRequest request)
     {
         if (request.OrderItems == null || !request.OrderItems.Any())
@@ -29,9 +32,10 @@ public class OrderManagementService : IOrderManagementService
                 throw new BusinessException(ErrorMessages.QuantityMustBeGreaterThanZero);
         }
 
-        var customerExists = await _context.Customers.AnyAsync(c => c.Id == request.CustomerId);
+        // Se le pide al repositorio el cliente
+        var customer = await _repository.GetById<Customer>(request.CustomerId);
 
-        if (!customerExists)
+        if (customer == null)
             throw new KeyNotFoundException(ErrorMessages.CustomerNotFound);
 
         var order = new Order
@@ -46,11 +50,12 @@ public class OrderManagementService : IOrderManagementService
         };
 
         decimal total = 0;
+        var productsToUpdate = new List<Product>();
 
         foreach (var item in request.OrderItems)
         {
-            var product = await _context.Products
-                .FirstOrDefaultAsync(p => p.Id == item.ProductId && p.IsActive);
+            // Se le pide al repositorio cada producto
+            var product = await _repository.First<Product>(p => p.Id == item.ProductId && p.IsActive);
 
             if (product == null)
                 throw new KeyNotFoundException(ErrorMessages.ProductNotFound);
@@ -73,23 +78,24 @@ public class OrderManagementService : IOrderManagementService
 
             order.OrderItems.Add(orderItem);
             product.StockQuantity -= item.Quantity;
+            productsToUpdate.Add(product);
             total += subtotal;
         }
 
         order.TotalAmount = total;
 
-        _context.Orders.Add(order);
-        await _context.SaveChangesAsync();
+        // Recién cuando todo se validó, se guardan los cambios
+        foreach (var product in productsToUpdate.Distinct())
+        {
+            await _repository.Update(product);
+        }
 
-        order = await _context.Orders
-            .Include(o => o.Customer)
-            .Include(o => o.OrderItems)
-            .FirstOrDefaultAsync(o => o.Id == order.Id);
+        await _repository.Add(order);
 
         return new OrderModel.OrderResponse(
             order.Id,
             order.CustomerId,
-            order.Customer.Name,
+            customer.Name,
             order.ShippingAddress,
             order.BillingAddress,
             order.TotalAmount,
