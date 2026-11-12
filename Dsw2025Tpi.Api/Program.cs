@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Api.Middlewares;
 using Dsw2025Tpi.Application.Services.Interfaces;
@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Identity;
 using Dsw2025Tpi.Application.Exceptions;
 using Dsw2025Tpi.Application.Constants;
 using Dsw2025Tpi.Data.Seed;
+using Dsw2025Tpi.Domain.Interfaces; // <-- Agregado para el repositorio
+using Dsw2025Tpi.Data.Repositories; // <-- Agregado para la implementación del repositorio
 
 namespace Dsw2025Tpi.Api;
 
@@ -52,6 +54,10 @@ public class Program
         builder.Services.AddScoped<IProductManagementService, ProductManagementService>();
         builder.Services.AddScoped<IOrderManagementService, OrderManagementService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+        
+        // Registro del Repositorio de Productos para la tarea TP4-02
+        builder.Services.AddScoped<IProductRepository, ProductRepository>();
+
         builder.Services.AddSingleton<JwtTokenService>();
         builder.Services.AddTransient<UserSeeder>();
 
