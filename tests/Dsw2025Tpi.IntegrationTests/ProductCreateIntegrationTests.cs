@@ -5,12 +5,13 @@ using Dsw2025Tpi.Application.Constants;
 using Dsw2025Tpi.Application.Dtos;
 using Dsw2025Tpi.Data;
 using Dsw2025Tpi.Domain.Entities;
+using Dsw2025Tpi.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Dsw2025Tpi.IntegrationTests;
 
-[Collection("IntegrationTests")]
+[Collection(IntegrationTestsCollection.Name)]
 public class ProductCreateIntegrationTests
 {
     private const string Url = "/api/products";
