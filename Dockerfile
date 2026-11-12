@@ -1,26 +1,28 @@
+# syntax=docker/dockerfile:1
+
 # ============ ETAPA 1: BUILD ============
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY Dsw2025Tpi.Api/Dsw2025Tpi.Api.csproj                 Dsw2025Tpi.Api/
-COPY Dsw2025Tpi.Application/Dsw2025Tpi.Application.csproj Dsw2025Tpi.Application/
-COPY Dsw2025Tpi.Data/Dsw2025Tpi.Data.csproj                Dsw2025Tpi.Data/
-COPY Dsw2025Tpi.Domain/Dsw2025Tpi.Domain.csproj            Dsw2025Tpi.Domain/
-
-RUN dotnet restore Dsw2025Tpi.Api/Dsw2025Tpi.Api.csproj
-
+# Copia todo el código fuente
 COPY . .
-RUN dotnet publish Dsw2025Tpi.Api/Dsw2025Tpi.Api.csproj \
-    -c Release -o /app/publish --no-restore /p:UseAppHost=false
 
-# ============ ETAPA 2: RUNTIME ============
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+# Compila y publica la API en la carpeta /app/publish
+RUN dotnet publish Dsw2025Tpi.Api/Dsw2025Tpi.Api.csproj -c Release -o /app/publish
+
+# ============ ETAPA 2: FINAL (RUNTIME) ============
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
-COPY --from=build /app/publish .
+# Variables de entorno requeridas por la guía
+ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_ENVIRONMENT=Production
 
-ENV ASPNETCORE_HTTP_PORTS=8080
+# Exponer el puerto
 EXPOSE 8080
 
-USER $APP_UID
+# Copia solo los binarios compilados de la etapa build
+COPY --from=build /app/publish .
+
+# Comando de inicio
 ENTRYPOINT ["dotnet", "Dsw2025Tpi.Api.dll"]

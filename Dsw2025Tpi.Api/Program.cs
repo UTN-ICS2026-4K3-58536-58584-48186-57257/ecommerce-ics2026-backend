@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Dsw2025Tpi.Application.Services;
 using Dsw2025Tpi.Api.Middlewares;
 using Dsw2025Tpi.Application.Services.Interfaces;
@@ -10,11 +10,15 @@ using Microsoft.AspNetCore.Identity;
 using Dsw2025Tpi.Application.Exceptions;
 using Dsw2025Tpi.Application.Constants;
 using Dsw2025Tpi.Data.Seed;
+using Dsw2025Tpi.Domain.Interfaces; // <-- Agregado para el repositorio
+using Dsw2025Tpi.Data.Repositories; // <-- Agregado para la implementación del repositorio
 
 namespace Dsw2025Tpi.Api;
 
 public class Program
 {
+    public const string TestingEnvironmentName = "Testing";
+
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -24,15 +28,21 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddHealthChecks();
 
-        builder.Services.AddDbContext<Dsw2025TpiContext>(options =>
-        {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-        });
+        // En el entorno "Testing" (tests de integración) se usa SQLite; en el resto, SQL Server.
+        var isTesting = builder.Environment.IsEnvironment(TestingEnvironmentName);
 
-        builder.Services.AddDbContext<AuthenticateContext>(options =>
+        void ConfigureDatabase(DbContextOptionsBuilder options)
         {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-        });
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+            if (isTesting)
+                options.UseSqlite(connectionString ?? "Data Source=Dsw2025TpiTests;Mode=Memory;Cache=Shared");
+            else
+                options.UseSqlServer(connectionString);
+        }
+
+        builder.Services.AddDbContext<Dsw2025TpiContext>(ConfigureDatabase);
+        builder.Services.AddDbContext<AuthenticateContext>(ConfigureDatabase);
 
         builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
         {
@@ -44,6 +54,10 @@ public class Program
         builder.Services.AddScoped<IProductManagementService, ProductManagementService>();
         builder.Services.AddScoped<IOrderManagementService, OrderManagementService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+        
+        // Registro del Repositorio de Productos para la tarea TP4-02
+        builder.Services.AddScoped<IProductRepository, ProductRepository>();
+
         builder.Services.AddSingleton<JwtTokenService>();
         builder.Services.AddTransient<UserSeeder>();
 
@@ -149,12 +163,17 @@ public class Program
         {
             var services = scope.ServiceProvider;
 
-            // Crear o actualizar las tablas de ambos contextos antes de cargar datos
+            // Crear o actualizar las tablas de ambos contextos antes de cargar datos.
+            // En "Testing" las migraciones (específicas de SQL Server) no aplican:
+            // el esquema SQLite lo crea la fábrica de los tests de integración.
             var db = services.GetRequiredService<Dsw2025TpiContext>();
-            await db.Database.MigrateAsync();
-
             var authDb = services.GetRequiredService<AuthenticateContext>();
-            await authDb.Database.MigrateAsync();
+
+            if (!isTesting)
+            {
+                await db.Database.MigrateAsync();
+                await authDb.Database.MigrateAsync();
+            }
 
             // Seed de customers desde JSON
             await db.SeedCustomersAsync();
