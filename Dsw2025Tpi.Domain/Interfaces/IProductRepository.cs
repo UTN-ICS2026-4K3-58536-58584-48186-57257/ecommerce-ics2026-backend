@@ -9,8 +9,8 @@ public interface IProductRepository
 
     Task<Product?> GetByIdAsync(Guid id);
 
-    Task<(IReadOnlyList<Product> Items, int Total)> SearchAsync(
-        string? search, string? status, int pageNumber, int pageSize);
+    /// <summary>Devuelve todos los productos (el filtrado y la paginación los hace el servicio).</summary>
+    Task<IReadOnlyList<Product>> GetAllAsync();
 
     /// <summary>Agrega el producto y persiste los cambios.</summary>
     Task AddAsync(Product product);
