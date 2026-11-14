@@ -23,29 +23,13 @@ public class ProductRepository : IProductRepository
         return _context.Products.FirstOrDefaultAsync(p => p.Id == id);
     }
 
-    public async Task<(IReadOnlyList<Product> Items, int Total)> SearchAsync(
-        string? search, string? status, int pageNumber, int pageSize)
+    public async Task<IReadOnlyList<Product>> GetAllAsync()
     {
-        var query = _context.Products.AsNoTracking().AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            query = query.Where(p => p.Name.Contains(search) || p.Sku.Contains(search));
-        }
-
-        if (!string.IsNullOrWhiteSpace(status) && status != "all")
-        {
-            bool isActive = status.ToLower() == "enabled";
-            query = query.Where(p => p.IsActive == isActive);
-        }
-
-        var total = await query.CountAsync();
-        var items = await query
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
+        return await _context.Products
+            .AsNoTracking()
+            .OrderBy(p => p.Name)
+            .ThenBy(p => p.Id)
             .ToListAsync();
-
-        return (items, total);
     }
 
     public async Task AddAsync(Product product)
