@@ -53,6 +53,7 @@ public class Program
 
         builder.Services.AddScoped<IProductManagementService, ProductManagementService>();
         builder.Services.AddScoped<IOrderManagementService, OrderManagementService>();
+        builder.Services.AddScoped<IRepository, EfRepository>();
         builder.Services.AddScoped<IAuthService, AuthService>();
         
         // Registro del Repositorio de Productos para la tarea TP4-02
